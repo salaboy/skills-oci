@@ -6,11 +6,19 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) for an inter
 
 ## Installation
 
+### Homebrew
+
+```bash
+brew install salaboy/tap/skills-oci
+```
+
+### Go install
+
 ```bash
 go install github.com/salaboy/skills-oci@latest
 ```
 
-Or build from source:
+### Build from source
 
 ```bash
 git clone https://github.com/salaboy/skills-oci.git
