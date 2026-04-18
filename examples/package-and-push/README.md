@@ -44,10 +44,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-std
 ## Step 2 — Push the skill as an OCI artifact
 
 ```bash
-skills-oci push \
-  --ref ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf \
-  --path ./pdf \
-  --tag 1.0.0
+skills-oci push ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf:1.0.0 ./pdf
 ```
 
 Expected output:
@@ -62,11 +59,7 @@ Expected output:
 To push with plain HTTP (local registry):
 
 ```bash
-skills-oci push \
-  --ref localhost:5000/skills/pdf \
-  --path ./pdf \
-  --tag 1.0.0 \
-  --plain-http
+skills-oci push localhost:5000/skills/pdf:1.0.0 ./pdf --plain-http
 ```
 
 ---
@@ -86,11 +79,7 @@ and set the visibility to **Public**.
 Once pushed, anyone can install your skill:
 
 ```bash
-# Into .agents/skills/ (standard)
-skills-oci add --ref ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf:1.0.0
-
-# Into .claude/skills/ (Claude Code)
-skills-oci add --ref ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf:1.0.0 --claude
+skills-oci add ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf:1.0.0
 ```
 
 ---
@@ -114,14 +103,11 @@ The artifact is compatible with any OCI-compliant registry: GHCR, Docker Hub, EC
 Edit `pdf/SKILL.md`, bump the `version` field, then push again with the new tag:
 
 ```bash
-skills-oci push \
-  --ref ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf \
-  --path ./pdf \
-  --tag 1.1.0
+skills-oci push ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf:1.1.0 ./pdf
 ```
 
 Projects using `skills.json` can then update to the new version:
 
 ```bash
-skills-oci add --ref ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf:1.1.0 --claude
+skills-oci add ghcr.io/YOUR_GITHUB_USERNAME/skills/pdf:1.1.0
 ```

@@ -12,38 +12,35 @@ import (
 
 func newPushCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "push",
+		Use:   "push [OPTIONS] NAME[:TAG] PATH",
 		Short: "Package and push a skill to an OCI registry",
 		Long:  "Validates a skill directory, packages it as an OCI artifact, and pushes it to a remote container registry.",
-		Example: `  # Push a skill to GHCR
-  skills-oci push --ref ghcr.io/myorg/skills/my-skill --path ./my-skill --tag 1.0.0
+		Example: `  # Push the skill in the current directory
+  skills-oci push ghcr.io/myorg/skills/my-skill:1.0.0 .
+
+  # Push a skill from a specific directory
+  skills-oci push ghcr.io/myorg/skills/my-skill:1.0.0 ./my-skill
 
   # Push to a local registry (plain HTTP)
-  skills-oci push --ref localhost:5000/my-skill --path ./my-skill --tag 1.0.0 --plain-http`,
+  skills-oci push localhost:5000/my-skill:1.0.0 . --plain-http`,
+		Args: cobra.ExactArgs(2),
 		RunE: runPush,
 	}
-
-	cmd.Flags().String("ref", "", "Registry reference (e.g., ghcr.io/org/skills/my-skill)")
-	cmd.Flags().String("path", ".", "Path to skill directory")
-	cmd.Flags().String("tag", "", "Version tag (e.g., 1.0.0)")
-
-	_ = cmd.MarkFlagRequired("ref")
 
 	return cmd
 }
 
 func runPush(cmd *cobra.Command, args []string) error {
-	ref, _ := cmd.Flags().GetString("ref")
-	path, _ := cmd.Flags().GetString("path")
-	tag, _ := cmd.Flags().GetString("tag")
+	ref := args[0]
+	path := args[1]
 	plain, _ := cmd.Flags().GetBool("plain")
 	plainHTTP, _ := cmd.Flags().GetBool("plain-http")
 
 	if plain {
-		return runPushPlain(ref, path, tag, plainHTTP)
+		return runPushPlain(ref, path, plainHTTP)
 	}
 
-	m := push.NewModel(ref, tag, path, plainHTTP)
+	m := push.NewModel(ref, path, plainHTTP)
 	p := tea.NewProgram(m)
 	finalModel, err := p.Run()
 	if err != nil {
@@ -60,10 +57,9 @@ func runPush(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPushPlain(ref, path, tag string, plainHTTP bool) error {
+func runPushPlain(ref, path string, plainHTTP bool) error {
 	result, err := oci.Push(context.Background(), oci.PushOptions{
 		Reference: ref,
-		Tag:       tag,
 		SkillDir:  path,
 		PlainHTTP: plainHTTP,
 		OnStatus: func(phase string) {

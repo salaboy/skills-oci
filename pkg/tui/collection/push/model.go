@@ -30,7 +30,6 @@ type Model struct {
 	phase     phase
 	spinner   spinner.Model
 	ref       string
-	tag       string
 	name      string
 	skillRefs []string
 	plainHTTP bool
@@ -39,12 +38,11 @@ type Model struct {
 }
 
 // NewModel creates a new collection push TUI model.
-func NewModel(ref, tag, name string, skillRefs []string, plainHTTP bool) Model {
+func NewModel(ref, name string, skillRefs []string, plainHTTP bool) Model {
 	return Model{
 		phase:     phaseResolving,
 		spinner:   components.NewSpinner(),
 		ref:       ref,
-		tag:       tag,
 		name:      name,
 		skillRefs: skillRefs,
 		plainHTTP: plainHTTP,
@@ -140,7 +138,6 @@ func (m Model) runPush() tea.Cmd {
 	return func() tea.Msg {
 		result, err := oci.PushCollection(context.Background(), oci.PushCollectionOptions{
 			Reference: m.ref,
-			Tag:       m.tag,
 			Name:      m.name,
 			SkillRefs: m.skillRefs,
 			PlainHTTP: m.plainHTTP,

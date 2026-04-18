@@ -32,31 +32,26 @@ func newCollectionCmd() *cobra.Command {
 
 func newCollectionPushCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "push",
+		Use:   "push [OPTIONS] NAME[:TAG]",
 		Short: "Create and push a skills collection to an OCI registry",
 		Long:  "Resolves the given skill references, builds an OCI Image Index, and pushes it to a remote container registry.",
 		Example: `  # Push a collection to GHCR
-  skills-oci collection push \
-    --ref ghcr.io/myorg/collections/dev-tools \
+  skills-oci collection push ghcr.io/myorg/collections/dev-tools:latest \
     --name dev-tools \
     --skill ghcr.io/myorg/skills/manage-prs:1.0.0 \
     --skill ghcr.io/myorg/skills/lint-code:2.0.0
 
   # Push with a version tag
-  skills-oci collection push \
-    --ref ghcr.io/myorg/collections/dev-tools \
+  skills-oci collection push ghcr.io/myorg/collections/dev-tools:v1.0.0 \
     --name dev-tools \
-    --tag v1.0.0 \
     --skill ghcr.io/myorg/skills/manage-prs:1.0.0`,
+		Args: cobra.ExactArgs(1),
 		RunE: runCollectionPush,
 	}
 
-	cmd.Flags().String("ref", "", "Registry reference for the collection (e.g., ghcr.io/org/collections/my-collection)")
 	cmd.Flags().String("name", "", "Collection name (stored as io.agentskills.collection.name annotation)")
-	cmd.Flags().String("tag", "latest", "Version tag for the collection (e.g., v1.0.0)")
 	cmd.Flags().StringArray("skill", nil, "Skill OCI reference to include (repeatable)")
 
-	_ = cmd.MarkFlagRequired("ref")
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("skill")
 
@@ -64,18 +59,17 @@ func newCollectionPushCmd() *cobra.Command {
 }
 
 func runCollectionPush(cmd *cobra.Command, args []string) error {
-	ref, _ := cmd.Flags().GetString("ref")
+	ref := args[0]
 	name, _ := cmd.Flags().GetString("name")
-	tag, _ := cmd.Flags().GetString("tag")
 	skillRefs, _ := cmd.Flags().GetStringArray("skill")
 	plain, _ := cmd.Flags().GetBool("plain")
 	plainHTTP, _ := cmd.Flags().GetBool("plain-http")
 
 	if plain {
-		return runCollectionPushPlain(ref, name, tag, skillRefs, plainHTTP)
+		return runCollectionPushPlain(ref, name, skillRefs, plainHTTP)
 	}
 
-	m := collectionpush.NewModel(ref, tag, name, skillRefs, plainHTTP)
+	m := collectionpush.NewModel(ref, name, skillRefs, plainHTTP)
 	p := tea.NewProgram(m)
 	finalModel, err := p.Run()
 	if err != nil {
@@ -91,12 +85,11 @@ func runCollectionPush(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runCollectionPushPlain(ref, name, tag string, skillRefs []string, plainHTTP bool) error {
+func runCollectionPushPlain(ref, name string, skillRefs []string, plainHTTP bool) error {
 	fmt.Printf("Resolving %d skill reference(s)...\n", len(skillRefs))
 
 	result, err := oci.PushCollection(context.Background(), oci.PushCollectionOptions{
 		Reference: ref,
-		Tag:       tag,
 		Name:      name,
 		SkillRefs: skillRefs,
 		PlainHTTP: plainHTTP,
@@ -120,28 +113,26 @@ func runCollectionPushPlain(ref, name, tag string, skillRefs []string, plainHTTP
 
 func newCollectionAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add",
+		Use:   "add [OPTIONS] NAME[:TAG]",
 		Short: "Install all skills from a collection",
 		Long:  "Fetches a skills collection index from a remote registry and installs each referenced skill, updating skills.json and skills.lock.json.",
 		Example: `  # Install all skills from a collection
-  skills-oci collection add --ref ghcr.io/myorg/collections/dev-tools:v1.0.0
+  skills-oci collection add ghcr.io/myorg/collections/dev-tools:v1.0.0
 
-  # Install to .claude/skills
-  skills-oci collection add --ref ghcr.io/myorg/collections/dev-tools:v1.0.0 --claude`,
+  # Install from a local registry (plain HTTP)
+  skills-oci collection add localhost:5000/collections/dev-tools:v1.0.0 --plain-http`,
+		Args: cobra.ExactArgs(1),
 		RunE: runCollectionAdd,
 	}
 
-	cmd.Flags().String("ref", "", "Full OCI reference of the collection (e.g., ghcr.io/org/collections/my-collection:v1.0.0)")
 	cmd.Flags().String("output", "", "Output directory for skill extraction (overrides default)")
 	cmd.Flags().String("project-dir", ".", "Project directory containing skills.json and skills.lock.json")
-
-	_ = cmd.MarkFlagRequired("ref")
 
 	return cmd
 }
 
 func runCollectionAdd(cmd *cobra.Command, args []string) error {
-	ref, _ := cmd.Flags().GetString("ref")
+	ref := args[0]
 	output, _ := cmd.Flags().GetString("output")
 	projectDir, _ := cmd.Flags().GetString("project-dir")
 	plain, _ := cmd.Flags().GetBool("plain")
@@ -265,23 +256,20 @@ func updateCollectionLockFile(projectDir, skillsDir string, result *oci.PullResu
 
 func newCollectionListCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
+		Use:   "list [OPTIONS] NAME[:TAG]",
 		Short: "List skills in a collection without installing",
 		Long:  "Fetches a skills collection index and displays the list of referenced skills.",
 		Example: `  # List skills in a collection
-  skills-oci collection list --ref ghcr.io/myorg/collections/dev-tools:v1.0.0`,
+  skills-oci collection list ghcr.io/myorg/collections/dev-tools:v1.0.0`,
+		Args: cobra.ExactArgs(1),
 		RunE: runCollectionList,
 	}
-
-	cmd.Flags().String("ref", "", "Full OCI reference of the collection (e.g., ghcr.io/org/collections/my-collection:v1.0.0)")
-
-	_ = cmd.MarkFlagRequired("ref")
 
 	return cmd
 }
 
 func runCollectionList(cmd *cobra.Command, args []string) error {
-	ref, _ := cmd.Flags().GetString("ref")
+	ref := args[0]
 	plainHTTP, _ := cmd.Flags().GetBool("plain-http")
 
 	collection, err := oci.FetchCollection(context.Background(), oci.FetchCollectionOptions{

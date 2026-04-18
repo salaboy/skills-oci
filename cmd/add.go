@@ -15,32 +15,33 @@ import (
 
 func newAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add",
+		Use:   "add [OPTIONS] NAME[:TAG]",
 		Short: "Install a skill from an OCI registry",
-		Long:  "Pulls a skill artifact from a remote container registry, extracts it to .agents/skills, and creates symlinks in .claude/skills, .codex/skills, .cursor/skills, and .gemini/skills.",
+		Long:  "Pulls a skill artifact from a remote container registry by its NAME[:TAG] reference, extracts it to .agents/skills, and creates symlinks in .claude/skills, .codex/skills, .cursor/skills, and .gemini/skills.",
 		Example: `  # Install a skill from GHCR
-  skills-oci add --ref ghcr.io/myorg/skills/my-skill:1.0.0
+  skills-oci add ghcr.io/myorg/skills/my-skill:1.0.0
 
-  # Install from a local registry
-  skills-oci add --ref localhost:5000/my-skill:1.0.0 --plain-http
+  # Install from a local registry (plain HTTP)
+  skills-oci add localhost:5000/my-skill:1.0.0 --plain-http
 
-  # Install to a custom directory
-  skills-oci add --ref ghcr.io/myorg/skills/my-skill:1.0.0 --output ./custom/path`,
+  # Install to a custom output directory
+  skills-oci add ghcr.io/myorg/skills/my-skill:1.0.0 --output ./custom/path
+
+  # Install relative to a specific project directory
+  skills-oci add ghcr.io/myorg/skills/my-skill:1.0.0 --project-dir ./my-project`,
+		Args: cobra.ExactArgs(1),
 		RunE: runAdd,
 	}
 
-	cmd.Flags().String("ref", "", "Full OCI reference (e.g., ghcr.io/org/skills/my-skill:1.0.0)")
 	cmd.Flags().String("output", "", "Output directory for skill extraction (overrides default)")
 	cmd.Flags().String("project-dir", ".", "Project directory containing skills.json and skills.lock.json")
 	cmd.Flags().StringArray("additional-base-path", nil, "Extra base directory to also install the skill into (repeatable)")
-
-	_ = cmd.MarkFlagRequired("ref")
 
 	return cmd
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
-	ref, _ := cmd.Flags().GetString("ref")
+	ref := args[0]
 	output, _ := cmd.Flags().GetString("output")
 	projectDir, _ := cmd.Flags().GetString("project-dir")
 	extraPaths, _ := cmd.Flags().GetStringArray("additional-base-path")

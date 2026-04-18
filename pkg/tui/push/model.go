@@ -35,7 +35,6 @@ type Model struct {
 	phase     phase
 	spinner   spinner.Model
 	ref       string
-	tag       string
 	skillDir  string
 	plainHTTP bool
 	config    *skill.SkillConfig
@@ -44,12 +43,11 @@ type Model struct {
 }
 
 // NewModel creates a new push TUI model.
-func NewModel(ref, tag, skillDir string, plainHTTP bool) Model {
+func NewModel(ref, skillDir string, plainHTTP bool) Model {
 	return Model{
 		phase:     phaseValidating,
 		spinner:   components.NewSpinner(),
 		ref:       ref,
-		tag:       tag,
 		skillDir:  skillDir,
 		plainHTTP: plainHTTP,
 	}
@@ -186,7 +184,6 @@ func (m Model) runPush() tea.Cmd {
 
 		result, err := oci.Push(ctx, oci.PushOptions{
 			Reference: m.ref,
-			Tag:       m.tag,
 			SkillDir:  m.skillDir,
 			PlainHTTP: m.plainHTTP,
 			OnStatus:  func(phase string) {},

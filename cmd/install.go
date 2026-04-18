@@ -8,17 +8,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newLoadCmd() *cobra.Command {
+func newInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "load",
+		Use:   "install",
 		Short: "Install all skills from skills.json that are not already present",
 		Long:  "Reads skills.json and pulls any skills whose directories are missing from .agents/skills, then recreates symlinks in the tool-specific directories.",
-		Example: `  # Load all missing skills
-  skills-oci load
+		Example: `  # Install all missing skills
+  skills-oci install
 
-  # Load from a local registry
-  skills-oci load --plain-http`,
-		RunE: runLoad,
+  # Install from a local registry
+  skills-oci install --plain-http`,
+		RunE: runInstall,
 	}
 
 	cmd.Flags().String("project-dir", ".", "Project directory containing skills.json")
@@ -26,13 +26,13 @@ func newLoadCmd() *cobra.Command {
 	return cmd
 }
 
-func runLoad(cmd *cobra.Command, args []string) error {
+func runInstall(cmd *cobra.Command, args []string) error {
 	projectDir, _ := cmd.Flags().GetString("project-dir")
 	plain, _ := cmd.Flags().GetBool("plain")
 	plainHTTP, _ := cmd.Flags().GetBool("plain-http")
 
 	if plain {
-		return runLoadPlain(projectDir, defaultSkillsDir, plainHTTP)
+		return runInstallPlain(projectDir, defaultSkillsDir, plainHTTP)
 	}
 
 	m := load.NewModel(projectDir, defaultSkillsDir, plainHTTP)
@@ -51,7 +51,7 @@ func runLoad(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runLoadPlain(projectDir, skillsDir string, plainHTTP bool) error {
+func runInstallPlain(projectDir, skillsDir string, plainHTTP bool) error {
 	fmt.Println("  Reading skills.json")
 
 	installed, skipped, err := load.LoadSkills(projectDir, skillsDir, plainHTTP, func(status string) {

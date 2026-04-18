@@ -69,16 +69,16 @@ See [`examples/package-and-push/`](examples/package-and-push/) for a complete wa
 ### Push to a registry
 
 ```bash
-skills-oci push --ref ghcr.io/myorg/skills/my-skill --path ./my-skill --tag 1.0.0
+skills-oci push ghcr.io/myorg/skills/my-skill:1.0.0 ./my-skill
 ```
 
 ### Push to a local registry (plain HTTP)
 
 ```bash
-skills-oci push --ref localhost:5000/my-skill --path ./my-skill --tag 1.0.0 --plain-http
+skills-oci push localhost:5000/my-skill:1.0.0 ./my-skill --plain-http
 ```
 
-The `--path` flag defaults to the current directory if omitted. If `--tag` is not provided, the artifact is tagged as `latest`.
+If no tag is provided in `NAME[:TAG]`, the artifact is tagged as `latest`.
 
 ### What gets pushed
 
@@ -92,30 +92,24 @@ The artifact is compatible with any OCI-compliant registry (GHCR, ECR, GAR, ACR,
 
 ## Installing Skills
 
-The `add` command pulls a skill artifact from a registry, extracts it into `.agents/skills/` (or `.claude/skills/` with `--claude`), and updates the project manifest files.
+The `add` command pulls a skill artifact from a registry, extracts it into `.agents/skills/`, creates symlinks in `.claude/skills/`, `.codex/skills/`, `.cursor/skills/`, and `.gemini/skills/`, and updates the project manifest files.
 
 ### Install a skill
 
 ```bash
-skills-oci add --ref ghcr.io/myorg/skills/my-skill:1.0.0
+skills-oci add ghcr.io/myorg/skills/my-skill:1.0.0
 ```
 
 ### Install from a local registry
 
 ```bash
-skills-oci add --ref localhost:5000/my-skill:1.0.0 --plain-http
-```
-
-### Install to .claude/skills (for Claude Code projects)
-
-```bash
-skills-oci add --ref ghcr.io/myorg/skills/my-skill:1.0.0 --claude
+skills-oci add localhost:5000/my-skill:1.0.0 --plain-http
 ```
 
 ### Install to a custom directory
 
 ```bash
-skills-oci add --ref ghcr.io/myorg/skills/my-skill:1.0.0 --output ./custom/skills
+skills-oci add ghcr.io/myorg/skills/my-skill:1.0.0 --output ./custom/skills
 ```
 
 After installation, the skill is extracted and ready for use:
@@ -123,20 +117,6 @@ After installation, the skill is extracted and ready for use:
 ```
 my-project/
   .agents/
-    skills/
-      manage-pull-requests/
-        SKILL.md
-        scripts/
-          create-pr.sh
-  skills.json
-  skills.lock.json
-```
-
-Or with `--claude`:
-
-```
-my-project/
-  .claude/
     skills/
       manage-pull-requests/
         SKILL.md
@@ -206,18 +186,10 @@ A lock file that records the exact OCI digests and metadata of installed skills,
 
 The lock file pins each skill to an immutable digest, so installations are reproducible regardless of whether mutable tags (like `latest` or `1.0`) have been updated.
 
-When using `--claude`, the `path` field reflects the `.claude/skills/` directory instead.
-
 ### Removing a skill
 
 ```bash
 skills-oci remove --name manage-pull-requests
-```
-
-If the skill was installed with `--claude`, pass the flag again:
-
-```bash
-skills-oci remove --name manage-pull-requests --claude
 ```
 
 This removes the skill from `skills.json`, `skills.lock.json`, and deletes the extracted directory.
@@ -229,7 +201,7 @@ This removes the skill from `skills.json`, `skills.lock.json`, and deletes the e
 ### How it works
 
 1. **Declare skills** in `skills.json` at the root of your project.
-2. **Register the hook** using `skills-oci register --claude`. This writes a `SessionStart` hook into `.claude/settings.json` that runs `skills-oci load --plain --claude` on every session start.
+2. **Register the hook** using `skills-oci register`. This writes a `SessionStart` hook into `.claude/settings.json` that runs `skills-oci install --plain` on every session start.
 3. **Start Claude Code** — the hook fires, reads `skills.json`, and pulls any missing skills into `.claude/skills/`. Skills already present are skipped, so subsequent starts are fast.
 
 ```
@@ -239,7 +211,7 @@ Project start → Claude Code launches
               SessionStart hook fires
                       │
                       ▼
-          skills-oci load --plain --claude
+          skills-oci install --plain
                       │
                  reads skills.json
                       │
@@ -261,7 +233,7 @@ brew install salaboy/tap/skills-oci
 
 **Step 2 — Declare your skills**
 
-Create a `skills.json` in your project root (or add skills interactively via `skills-oci add --claude`):
+Create a `skills.json` in your project root (or add skills interactively via `skills-oci add <NAME[:TAG]>`):
 
 ```json
 {
@@ -278,7 +250,7 @@ Create a `skills.json` in your project root (or add skills interactively via `sk
 **Step 3 — Register the hook**
 
 ```bash
-skills-oci register --claude
+skills-oci register
 ```
 
 This creates or updates `.claude/settings.json`:
@@ -292,7 +264,7 @@ This creates or updates `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "/usr/local/bin/skills-oci load --plain --claude",
+            "command": "/usr/local/bin/skills-oci install --plain",
             "timeout": 30
           }
         ]
@@ -317,12 +289,12 @@ See [`examples/claude-code-hooks/`](examples/claude-code-hooks/) for a minimal p
 
 ### Updating skills
 
-To add or update a skill, run `skills-oci add --claude --ref <ref>` (or edit `skills.json` directly) and commit the updated manifest. The hook will install the new skill on the next session start.
+To add or update a skill, run `skills-oci add <NAME[:TAG]>` (or edit `skills.json` directly) and commit the updated manifest. The hook will install the new skill on the next session start.
 
 To remove a skill:
 
 ```bash
-skills-oci remove --name manage-pull-requests --claude
+skills-oci remove --name manage-pull-requests
 ```
 
 ## Interactive TUI
@@ -330,8 +302,8 @@ skills-oci remove --name manage-pull-requests --claude
 By default, the CLI runs with an interactive terminal UI that shows progress through each phase with spinners and styled output. To disable the TUI (for CI/CD pipelines or scripting), use the `--plain` flag:
 
 ```bash
-skills-oci push --ref ghcr.io/myorg/skills/my-skill --path ./my-skill --tag 1.0.0 --plain
-skills-oci add --ref ghcr.io/myorg/skills/my-skill:1.0.0 --plain
+skills-oci push ghcr.io/myorg/skills/my-skill:1.0.0 ./my-skill --plain
+skills-oci add ghcr.io/myorg/skills/my-skill:1.0.0 --plain
 ```
 
 ## Global Flags
@@ -340,7 +312,6 @@ skills-oci add --ref ghcr.io/myorg/skills/my-skill:1.0.0 --plain
 |------|-------------|
 | `--plain` | Disable interactive TUI, use plain text output |
 | `--plain-http` | Use HTTP instead of HTTPS for registry connections |
-| `--claude` | Use `.claude/skills` instead of `.agents/skills` as the skills directory |
 
 ## Authentication
 

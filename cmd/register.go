@@ -64,7 +64,7 @@ func runRegister(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("finding skills-oci binary: %w", err)
 	}
 
-	loadCmd := binaryPath + " load --plain"
+	loadCmd := binaryPath + " install --plain"
 
 	// Collect all additionalBasePaths declared across all skills in skills.json.
 	manifest, err := skill.LoadManifest(projectDir)
@@ -92,7 +92,7 @@ func runRegister(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add skill directories to .gitignore so they are never accidentally committed.
-	// Skills are fetched on demand via `skills-oci load`; only skills.json and
+	// Skills are fetched on demand via `skills-oci install`; only skills.json and
 	// skills.lock.json should be tracked in version control.
 	if err := updateGitignore(projectDir, tools); err != nil {
 		fmt.Printf("  Warning: could not update .gitignore: %v\n", err)
@@ -110,10 +110,8 @@ func updateGitignore(projectDir string, tools []toolRegistrar) error {
 
 	data, err := os.ReadFile(gitignorePath)
 	if os.IsNotExist(err) {
-		// .gitignore doesn't exist — nothing to do.
-		return nil
-	}
-	if err != nil {
+		data = []byte{}
+	} else if err != nil {
 		return err
 	}
 
@@ -141,7 +139,7 @@ func updateGitignore(projectDir string, tools []toolRegistrar) error {
 	if len(existing) > 0 && !strings.HasSuffix(existing, "\n") {
 		sb.WriteString("\n")
 	}
-	sb.WriteString("\n# Agent skills — fetched via `skills-oci load`, not stored in git\n")
+	sb.WriteString("\n# Agent skills — fetched via `skills-oci install`, not stored in git\n")
 	for _, p := range added {
 		sb.WriteString(p)
 		sb.WriteString("\n")
@@ -156,7 +154,7 @@ func updateGitignore(projectDir string, tools []toolRegistrar) error {
 	for _, p := range added {
 		fmt.Printf("    %s\n", p)
 	}
-	fmt.Println("  Skills are fetched on demand by running `skills-oci load`.")
+	fmt.Println("  Skills are fetched on demand by running `skills-oci install`.")
 
 	return nil
 }
@@ -435,8 +433,8 @@ func resolveSkillsOCIPath() (string, error) {
 	return abs, nil
 }
 
-// isSkillsOCILoadCommand checks if a command string is a skills-oci load invocation.
+// isSkillsOCILoadCommand checks if a command string is a skills-oci install invocation.
 func isSkillsOCILoadCommand(cmd string) bool {
-	return strings.Contains(cmd, "skills-oci load") || strings.Contains(cmd, "skills-oci\" load")
+	return strings.Contains(cmd, "skills-oci install") || strings.Contains(cmd, "skills-oci\" install")
 }
 
